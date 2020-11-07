@@ -939,7 +939,7 @@ void first_task(double delta_time)
 		{ { 25,37,31 }, { 26, 34, 22}, { 34, 24, 38}, { 21,34,27 },{0,0,0},{0,0,0} }
 	};
 	double Beze[2][4][3] = {
-		{ { 0,0,0 }, { -5, -5, 35}, { -50, -30, 26}, { -25,-75,62 } },
+		{ { 0,0,0 }, { -5, -5, 25}, { -50, -30, 16}, { -25,-75,42 } },
 		{ { 5,7,9 }, { 6, 4, 8}, { 6, 7, 7}, { 4,7,9 } }
 		// { 0,0,0 }, { 0.6, -0.8, 20}, { -9, 13, 22}, { -15,-10,25 } 
 	};
@@ -1023,7 +1023,7 @@ void first_task(double delta_time)
 
 	Point A0(0, 0, 0), A1(0, 0, 0);
 	Point D(0, 0, 0), G(0, 0, 0);
-	for (double t = 0; t <= 2 * t_max; t += 0.01)
+	for (double t = 0; t <= 2 * t_max; t += 0.005)
 	{
 		A0 = A1;
 		if (t <= 1)
@@ -1401,26 +1401,36 @@ void DrowRocket(Point A, Point angle)
 		track.erase(track.begin(), track.begin() + 8);
 	}
 
-	glPointSize(5);
 	glColor3d(0.8, 0.8, 0.8);
 	glDisable(GL_TEXTURE_2D);
 	glDisable(GL_LIGHTING);
-	glBegin(GL_POINTS);
-	for (int i = 0; i < track.size(); i++)
-	{
-		double P[3] = { track[i][0], track[i][1], track[i][2] };
+	if(1)
+	{ 
+		double max_track = 8;
+		for (int i = 0; i < track.size(); i++)
+		{
+			double P[3] = { track[i][0], track[i][1], track[i][2] };
 
-		glColor3d(1-(double)i*2/600, 1-(double)i*2/600, 1-(double)i*2/600);
-		glVertex3dv(P);
+			glPointSize(max_track + 2 - (double)i / ((double)track.size()/max_track));
+			glBegin(GL_POINTS);
+			glColor3d(1-(double)i*2/ (track.size() * 3), 1-(double)i*2/ (track.size() * 3), 1-(double)i*2/ (track.size() * 3));
+			glVertex3dv(P);
+			glEnd();
+		}
 	}
-
-	/*for (Vector<double> tmp : track)
+	else
 	{
-		double P[3] = { tmp[0], tmp[1], tmp[2] };
-		glVertex3dv(P);
-	}*/
-	glEnd();
+		glPointSize(6);
+		glBegin(GL_POINTS);
+		for (int i = 0; i < track.size(); i++)
+		{
+			double P[3] = { track[i][0], track[i][1], track[i][2] };
 
+			glColor3d(1 - (double)i * 2 / 600, 1 - (double)i * 2 / 600, 1 - (double)i * 2 / 600);
+			glVertex3dv(P);
+		}
+		glEnd();
+	}
 	glEnable(GL_LIGHTING);
 	glEnable(GL_TEXTURE_2D);
 
