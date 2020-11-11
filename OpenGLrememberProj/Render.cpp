@@ -62,16 +62,6 @@ public: Point(double A, double B, double C)
 		  return sqrt(x * x + y * y + z * z);
 	  }
 
-	  double Abs(int O)
-	  {
-		  if (O == 0)
-			  return sqrt(y * y + z * z);
-		  if (O == 1)
-			  return sqrt(x * x + z * z);
-		  if (O == 2)
-			  return sqrt(y * y + x * x);
-	  }
-
 	  double scal(Point p)
 	  {
 		  return p.x * x + p.y * y + p.z * z;
@@ -82,39 +72,30 @@ public: Point(double A, double B, double C)
 		  return { y * p.z - z * p.y, z * p.x - x * p.z, x * p.y - y * p.x };
 	  }
 
-	  Point rottX(double angle)
+	  Point rootN(double angle, Point norm)
 	  {
-		  return { x, y * cos(angle) + z * sin(angle), -y * sin(angle) + z * cos(angle) };
+		  Vector<Vector<double>> M = {
+			{{cos(angle) + (1 - cos(angle)) * norm.x * norm.x},
+			{(1 - cos(angle)) * norm.x * norm.y - sin(angle) * norm.z},
+			{(1 - cos(angle)) * norm.x * norm.z + sin(angle) * norm.y}},
+
+			{{(1 - cos(angle)) * norm.y * norm.x + sin(angle) * norm.z},
+			{cos(angle) + (1 - cos(angle)) * norm.y * norm.y},
+			{(1 - cos(angle)) * norm.y * norm.z - sin(angle) * norm.x}},
+
+			{{(1 - cos(angle)) * norm.z * norm.x - sin(angle) * norm.y},
+			{(1 - cos(angle)) * norm.z * norm.y + sin(angle) * norm.x},
+			{cos(angle) + (1 - cos(angle)) * norm.z * norm.z}}
+		  };
+
+		  Point rez = { x*M[0][0]+y*M[0][1] + z*M[0][2], x * M[1][0] + y * M[1][1] + z * M[1][2], x * M[2][0] + y * M[2][1] + z * M[2][2] };
+		  return rez;
 	  }
 
-	  Point rottZ(double angle)
+	  double AN()
 	  {
-		  return { x * cos(angle) - y * sin(angle), x * sin(angle) + y * cos(angle), z };
-	  }
-
-	  double AX()
-	  {
-		  if (z >= 0 && y >= 0)
-			  return M_PI / 2 + asin(z / Abs(0)); // Назад, нижний сектор
-		  if (z >= 0 && y < 0)
-			  return M_PI / 2 + asin(z / Abs(0)); // Назад, верхний сектор
-		  if (z < 0 && y < 0)
-			  return M_PI / 2 - asin(abs(z) / Abs(0)); // Вперед, нижний сектор
-		  if (z < 0 && y >= 0)
-			  return M_PI / 2 - asin(abs(z) / Abs(0)); // Вперед, верхний сектор
-		  return M_PI / 2;
-	  }
-	  double AZ()
-	  {
-		  if (y >= 0 && x >= 0)
-			  return asin(y / Abs(2)) + M_PI / 2; // Вперед, верхний сектор
-		  if (y >= 0 && x < 0)
-			  return -M_PI / 2 - asin(y / Abs(2)); // Назад, нижний сектор
-		  if (y < 0 && x < 0)
-			  return asin(abs(y) / Abs(2)) - M_PI / 2; // Назад, верхний сектор
-		  if (y < 0 && x >= 0)
-			  return M_PI / 2 - asin(abs(y) / Abs(2)); // Вперед, нижний сектор
-		  return 0;
+		  Point nor = { x , y , z };
+		  return M_PI + acos(nor.z / 1 * nor.Abs());
 	  }
 
 	  void norm()
@@ -138,10 +119,6 @@ void second_task(double detail);
 Point Norm(double* A, double* B, double* C);
 
 bool changePoint = true;
-
-//Point Norm(double A[3], double B[3], double C[3]);
-//
-//double text_o(int k, int i, int side);
 
 bool textureMode = true;
 bool lightMode = true;
@@ -939,7 +916,7 @@ void first_task(double delta_time)
 		{ { 25,37,31 }, { 26, 34, 22}, { 34, 24, 38}, { 21,34,27 },{0,0,0},{0,0,0} }
 	};
 	double Beze[2][4][3] = {
-		{ { 0,0,0 }, { -5, -5, 25}, { -50, -30, 16}, { -25,-75,42 } },
+		{ { 0,0,0 }, { -10, -6, 20}, { -15, 20, 32}, { -45,-15, 15 } },
 		{ { 5,7,9 }, { 6, 4, 8}, { 6, 7, 7}, { 4,7,9 } }
 		// { 0,0,0 }, { 0.6, -0.8, 20}, { -9, 13, 22}, { -15,-10,25 } 
 	};
@@ -1043,14 +1020,10 @@ void first_task(double delta_time)
 		A1.NewValue(P2);
 		D = A1 - A0;
 		D.norm();
-		G = { D.AX(), 0, D.AZ() };
 	}
 
 	glEnable(GL_LIGHTING);
-	if(!rocket_stup)
-		DrowRocket(P2, G);
-	else
-		DrowRocket({ 0,0,0 }, { 0,0,0 });
+	DrowRocket(P2, D);
 }
 
 double changefire = 0;
@@ -1080,18 +1053,20 @@ void DrowFire(Vector<Vector<double>> points, Point A, Point angle)
 		{points[3][0] - 0.1, points[3][1] + 0.1, points[3][2]}}
 	};
 
-	for (int i = 0; i < 4; i++)
-	{
-		for (int j = 0; j < 4; j++)
+	if (!rocket_stup)
+		for (int i = 0; i < 4; i++)
 		{
-			Point P = fire[i][j];
-			P = P.rottX(angle.x);
-			P = P.rottZ(angle.z);
-			fire[i][j][0] = P.x + A.x;
-			fire[i][j][1] = P.y + A.y;
-			fire[i][j][2] = P.z + A.z;
+			for (int j = 0; j < 4; j++)
+			{
+				Point P = fire[i][j];
+				double a[3] = { 0,0,0 }, b[3] = { 0,0,1 }, c[3] = { angle.x, angle.y, angle.z };
+				Point norm = Norm(a, b, c);
+				P = P.rootN(angle.AN(), norm);
+				fire[i][j][0] = P.x + A.x;
+				fire[i][j][1] = P.y + A.y;
+				fire[i][j][2] = P.z + A.z;
+			}
 		}
-	}
 
 	glBindTexture(GL_TEXTURE_2D, texId[2]);
 	glDisable(GL_LIGHTING);
@@ -1173,15 +1148,17 @@ void DrowRocket(Point A, Point angle)
 		{0, 0, 2.325 }
 	};
 
-	for (int i = 0; i < 9; i++)
-	{
-		Point P = Korp[i];
-		P = P.rottX(angle.x);
-		P = P.rottZ(angle.z);
-		Korp[i][0] = P.x + A.x;
-		Korp[i][1] = P.y + A.y;
-		Korp[i][2] = P.z + A.z;
-	}
+	if(!rocket_stup)
+		for (int i = 0; i < 9; i++)
+		{
+			Point P = Korp[i];
+			double a[3] = { 0,0,0 }, b[3] = { 0,0,1 }, c[3] = { angle.x, angle.y, angle.z };
+			Point norm = Norm(a, b, c);
+			P = P.rootN(angle.AN(), norm);
+			Korp[i][0] = P.x + A.x;
+			Korp[i][1] = P.y + A.y;
+			Korp[i][2] = P.z + A.z;
+		}
 
 	double Engines[][3] = {
 		{0.5, -0.25, 0.325},
@@ -1222,15 +1199,17 @@ void DrowRocket(Point A, Point angle)
 		changefire = 0;
 	else changefire += 0.2;
 
-	for (int i = 0; i < 24; i++)
-	{
-		Point P = Engines[i];
-		P = P.rottX(angle.x);
-		P = P.rottZ(angle.z);
-		Engines[i][0] = P.x + A.x;
-		Engines[i][1] = P.y + A.y;
-		Engines[i][2] = P.z + A.z;
-	}
+	if (!rocket_stup)
+		for (int i = 0; i < 24; i++)
+		{
+			Point P = Engines[i];
+			double a[3] = { 0,0,0 }, b[3] = { 0,0,1 }, c[3] = { angle.x, angle.y, angle.z };
+			Point norm = Norm(a, b, c);
+			P = P.rootN(angle.AN(), norm);
+			Engines[i][0] = P.x + A.x;
+			Engines[i][1] = P.y + A.y;
+			Engines[i][2] = P.z + A.z;
+		}
 
 	glBindTexture(GL_TEXTURE_2D, texId[1]);
 
